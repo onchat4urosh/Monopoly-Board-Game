@@ -1,4 +1,4 @@
-const CACHE_NAME = 'board-money-cache-v3';
+const CACHE_NAME = 'board-money-cache-v4';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -12,7 +12,17 @@ const ASSETS_TO_CACHE = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(ASSETS_TO_CACHE))
+      .then((cache) => {
+        // Cache each asset individually so one 404/missing file doesn't
+        // fail the entire install (unlike cache.addAll, which is all-or-nothing).
+        return Promise.all(
+          ASSETS_TO_CACHE.map((url) =>
+            cache.add(url).catch((err) => {
+              console.warn('Service worker: could not cache', url, err);
+            })
+          )
+        );
+      })
       .then(() => self.skipWaiting())
   );
 });
