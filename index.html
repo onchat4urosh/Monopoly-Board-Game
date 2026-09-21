@@ -772,67 +772,78 @@
         }
 
         function renderPlayerPropertiesList(player) {
-            const container = document.getElementById('playerPropertiesList');
-            if (gameState.cities.length === 0) {
-                container.innerHTML = `<p class="text-xs text-gray-400 italic">No properties available. Reset properties in setup screen.</p>`;
-                return;
-            }
+		const container = document.getElementById('playerPropertiesList');
+		if (gameState.cities.length === 0) {
+			container.innerHTML = `<p class="text-xs text-gray-400 italic">No properties available. Reset properties in setup screen.</p>`;
+			return;
+		}
 
-            container.innerHTML = gameState.cities.map(c => {
-                const propState = (player.properties && player.properties[c.id]) ? player.properties[c.id] : { owned: false, houses: 0, hasHotel: false };
-                const housesCount = propState.houses || 0;
-                const totalRent = calculateCurrentRent(c, propState);
-                const badgeClass = GROUP_BADGE_COLORS[c.group] || 'bg-gray-500 text-white';
-                const isAirport = c.group === 'Airports';
+		// 1. Filter out properties owned by OTHER players
+		const availableCities = gameState.cities.filter(c => {
+			const isOwnedByAnother = gameState.players.some(p => p.id !== player.id && p.properties?.[c.id]?.owned);
+			return !isOwnedByAnother;
+		});
 
-                return `
-                    <div class="p-3 border border-gray-200 dark:border-gray-700 rounded-lg flex flex-col gap-2 bg-gray-50 dark:bg-gray-700/50">
-                        <div class="flex items-center justify-between text-xs">
-                            <div class="flex-1 pr-2">
-                                <div class="flex items-center gap-1.5 mb-0.5">
-                                    <span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${badgeClass}">${c.group || 'City'}</span>
-                                    <span class="font-bold text-gray-800 dark:text-gray-200 text-sm">${c.name}</span>
-                                </div>
-                                <div class="text-gray-500 dark:text-gray-400 text-[11px]">
-                                    Buy: <span class="font-bold text-gray-700 dark:text-gray-300">${c.buyPrice}${gameState.currency}</span> | House: <span class="font-bold text-gray-700 dark:text-gray-300">${c.houseCost}${gameState.currency}</span>
-                                </div>
-                                ${propState.owned ? `
-                                    <div class="text-monopolyGreen font-bold text-xs mt-0.5">
-                                        Current Rent: ${totalRent}${gameState.currency}
-                                    </div>
-                                ` : ''}
-                            </div>
-                            <label class="inline-flex items-center cursor-pointer select-none bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 px-2 py-1 rounded">
-                                <input type="checkbox" ${propState.owned ? 'checked' : ''} onchange="togglePropertyOwnership('${player.id}', '${c.id}', this.checked)" class="w-4 h-4 text-monopolyGreen rounded accent-monopolyGreen">
-                                <span class="ml-1.5 font-bold text-xs">Owned</span>
-                            </label>
-                        </div>
+		if (availableCities.length === 0) {
+			container.innerHTML = `<p class="text-xs text-gray-400 italic">No available properties left to purchase or manage.</p>`;
+			return;
+		}
 
-                        ${(propState.owned && !isAirport) ? `
-                            <div class="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-600 gap-2">
-                                <!-- HOUSE STEPPER -->
-                                <div class="flex items-center gap-1.5 bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800 px-2 py-1 rounded-lg">
-                                    <span class="text-xs font-bold text-monopolyGreen flex items-center gap-1">
-                                        <i class="fas fa-home"></i> Houses:
-                                    </span>
-                                    <div class="flex items-center gap-1 ml-1">
-                                        <button onclick="changeHouseCount('${player.id}', '${c.id}', -1)" ${housesCount <= 0 || propState.hasHotel ? 'disabled' : ''} class="w-5 h-5 bg-monopolyGreen text-white rounded flex items-center justify-center text-xs font-bold disabled:opacity-30 disabled:cursor-not-allowed">-</button>
-                                        <span class="text-xs font-bold px-1 min-w-[14px] text-center">${housesCount}</span>
-                                        <button onclick="changeHouseCount('${player.id}', '${c.id}', 1)" ${housesCount >= 4 || propState.hasHotel ? 'disabled' : ''} class="w-5 h-5 bg-monopolyGreen text-white rounded flex items-center justify-center text-xs font-bold disabled:opacity-30 disabled:cursor-not-allowed">+</button>
-                                    </div>
-                                </div>
+		container.innerHTML = availableCities.map(c => {
+			const propState = (player.properties && player.properties[c.id]) ? player.properties[c.id] : { owned: false, houses: 0, hasHotel: false };
+			const housesCount = propState.houses || 0;
+			const totalRent = calculateCurrentRent(c, propState);
+			const badgeClass = GROUP_BADGE_COLORS[c.group] || 'bg-gray-500 text-white';
+			const isAirport = c.group === 'Airports';
 
-                                <!-- HOTEL TOGGLE -->
-                                <button onclick="toggleHotel('${player.id}', '${c.id}')" class="px-2.5 py-1 rounded-lg text-xs font-bold border flex items-center gap-1 transition ${propState.hasHotel ? 'bg-red-600 text-white border-red-700 shadow-sm' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100'}">
-                                    <i class="fas fa-hotel"></i>
-                                    <span>${propState.hasHotel ? 'Hotel Built' : 'Add Hotel'}</span>
-                                </button>
-                            </div>
-                        ` : ''}
-                    </div>
-                `;
-            }).join('');
-        }
+			return `
+				<div class="p-3 border border-gray-200 dark:border-gray-700 rounded-lg flex flex-col gap-2 bg-gray-50 dark:bg-gray-700/50">
+					<div class="flex items-center justify-between text-xs">
+						<div class="flex-1 pr-2">
+							<div class="flex items-center gap-1.5 mb-0.5">
+								<span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${badgeClass}">${c.group || 'City'}</span>
+								<span class="font-bold text-gray-800 dark:text-gray-200 text-sm">${c.name}</span>
+							</div>
+							<div class="text-gray-500 dark:text-gray-400 text-[11px]">
+								Buy: <span class="font-bold text-gray-700 dark:text-gray-300">${c.buyPrice}${gameState.currency}</span> | House: <span class="font-bold text-gray-700 dark:text-gray-300">${c.houseCost}${gameState.currency}</span>
+							</div>
+							${propState.owned ? `
+								<div class="text-monopolyGreen font-bold text-xs mt-0.5">
+									Current Rent: ${totalRent}${gameState.currency}
+								</div>
+							` : ''}
+						</div>
+						<label class="inline-flex items-center cursor-pointer select-none bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 px-2 py-1 rounded">
+							<input type="checkbox" ${propState.owned ? 'checked' : ''} onchange="togglePropertyOwnership('${player.id}', '${c.id}', this.checked)" class="w-4 h-4 text-monopolyGreen rounded accent-monopolyGreen">
+							<span class="ml-1.5 font-bold text-xs">Owned</span>
+						</label>
+					</div>
+
+					${(propState.owned && !isAirport) ? `
+						<div class="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-600 gap-2">
+							<!-- HOUSE STEPPER -->
+							<div class="flex items-center gap-1.5 bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800 px-2 py-1 rounded-lg">
+								<span class="text-xs font-bold text-monopolyGreen flex items-center gap-1">
+									<i class="fas fa-home"></i> Houses:
+								</span>
+								<div class="flex items-center gap-1 ml-1">
+									<button onclick="changeHouseCount('${player.id}', '${c.id}', -1)" ${housesCount <= 0 || propState.hasHotel ? 'disabled' : ''} class="w-5 h-5 bg-monopolyGreen text-white rounded flex items-center justify-center text-xs font-bold disabled:opacity-30 disabled:cursor-not-allowed">-</button>
+									<span class="text-xs font-bold px-1 min-w-[14px] text-center">${housesCount}</span>
+									<button onclick="changeHouseCount('${player.id}', '${c.id}', 1)" ${housesCount >= 4 || propState.hasHotel ? 'disabled' : ''} class="w-5 h-5 bg-monopolyGreen text-white rounded flex items-center justify-center text-xs font-bold disabled:opacity-30 disabled:cursor-not-allowed">+</button>
+								</div>
+							</div>
+
+							<!-- HOTEL TOGGLE -->
+							<button onclick="toggleHotel('${player.id}', '${c.id}')" class="px-2.5 py-1 rounded-lg text-xs font-bold border flex items-center gap-1 transition ${propState.hasHotel ? 'bg-red-600 text-white border-red-700 shadow-sm' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100'}">
+								<i class="fas fa-hotel"></i>
+								<span>${propState.hasHotel ? 'Hotel Built' : 'Add Hotel'}</span>
+							</button>
+						</div>
+					` : ''}
+				</div>
+			`;
+		}).join('');
+	}
 
         // AUTOMATIC PAYMENT TRANSFER ENGINE HELPER
         function executeAutoTransferToBank(playerId, amount, memo) {
@@ -848,67 +859,84 @@
         }
 
         function togglePropertyOwnership(playerId, cityId, isOwned) {
-            const player = gameState.players.find(p => p.id === playerId);
-            const city = gameState.cities.find(c => c.id === cityId);
-            if (!player || !city) return;
+		const player = gameState.players.find(p => p.id === playerId);
+		const city = gameState.cities.find(c => c.id === cityId);
+		if (!player || !city) return;
 
-            if (!player.properties) player.properties = {};
-            if (!player.properties[cityId]) player.properties[cityId] = { owned: false, houses: 0, hasHotel: false };
+		if (!player.properties) player.properties = {};
+		if (!player.properties[cityId]) player.properties[cityId] = { owned: false, houses: 0, hasHotel: false };
 
-            const wasOwned = player.properties[cityId].owned;
-            player.properties[cityId].owned = isOwned;
+		const wasOwned = player.properties[cityId].owned;
 
-            if (isOwned && !wasOwned) {
-                // Transfer Property Buy Cost from Player to Bank
-                const cost = city.buyPrice || 0;
-                executeAutoTransferToBank(playerId, cost, `Bought ${city.name}`);
-            } else if (!isOwned) {
-                player.properties[cityId].houses = 0;
-                player.properties[cityId].hasHotel = false;
-            }
+		if (isOwned && !wasOwned) {
+			// Balance check before purchase
+			const cost = city.buyPrice || 0;
+			if (player.balance < cost) {
+				alert(`Insufficient funds! Player requires ${cost}${gameState.currency} to buy ${city.name}, but only has ${player.balance}${gameState.currency}.`);
+				renderPlayerPropertiesList(player);
+				return;
+			}
 
-            saveStateToStorage();
-            renderPlayerPropertiesList(player);
-        }
+			player.properties[cityId].owned = true;
+			executeAutoTransferToBank(playerId, cost, `Bought ${city.name}`);
+		} else if (!isOwned) {
+			player.properties[cityId].owned = false;
+			player.properties[cityId].houses = 0;
+			player.properties[cityId].hasHotel = false;
+		}
+
+		saveStateToStorage();
+		renderPlayerPropertiesList(player);
+	}
 
         function changeHouseCount(playerId, cityId, delta) {
-		console.log(delta);
-            const player = gameState.players.find(p => p.id === playerId);
-            const city = gameState.cities.find(c => c.id === cityId);
-            if (!player || !city || !player.properties || !player.properties[cityId]) return;
+		const player = gameState.players.find(p => p.id === playerId);
+		const city = gameState.cities.find(c => c.id === cityId);
+		if (!player || !city || !player.properties || !player.properties[cityId]) return;
 
-            let current = player.properties[cityId].houses || 0;
-            if (delta > 0 && current < 4) {
-                // Transfer House Construction Cost from Player to Bank
-                const cost = city.houseCost || 0;
-                executeAutoTransferToBank(playerId, cost, `Built house on ${city.name}`);
-            }
+		let current = player.properties[cityId].houses || 0;
 
-            current = Math.max(0, Math.min(4, current + delta));
-            player.properties[cityId].houses = current;
+		if (delta > 0 && current < 4) {
+			// Balance check before building house
+			const cost = city.houseCost || 0;
+			if (player.balance < cost) {
+				alert(`Insufficient funds! Building a house costs ${cost}${gameState.currency}, but player balance is ${player.balance}${gameState.currency}.`);
+				return;
+			}
+			executeAutoTransferToBank(playerId, cost, `Built house on ${city.name}`);
+		}
 
-            saveStateToStorage();
-            renderPlayerPropertiesList(player);
-        }
+		current = Math.max(0, Math.min(4, current + delta));
+		player.properties[cityId].houses = current;
+
+		saveStateToStorage();
+		renderPlayerPropertiesList(player);
+	}
 
         function toggleHotel(playerId, cityId) {
-            const player = gameState.players.find(p => p.id === playerId);
-            const city = gameState.cities.find(c => c.id === cityId);
-            if (!player || !city || !player.properties || !player.properties[cityId]) return;
+		const player = gameState.players.find(p => p.id === playerId);
+		const city = gameState.cities.find(c => c.id === cityId);
+		if (!player || !city || !player.properties || !player.properties[cityId]) return;
 
-            const isHotelActive = player.properties[cityId].hasHotel;
-            player.properties[cityId].hasHotel = !isHotelActive;
-            
-            if (!isHotelActive) {
-                // Transfer Hotel Cost (1 House Cost) from Player to Bank
-                const cost = city.houseCost || 0;
-                executeAutoTransferToBank(playerId, cost, `Built hotel on ${city.name}`);
-                player.properties[cityId].houses = 0; // Hotel replaces houses
-            }
+		const isHotelActive = player.properties[cityId].hasHotel;
 
-            saveStateToStorage();
-            renderPlayerPropertiesList(player);
-        }
+		if (!isHotelActive) {
+			// Balance check before building hotel
+			const cost = city.houseCost || 0;
+			if (player.balance < cost) {
+				alert(`Insufficient funds! Building a hotel costs ${cost}${gameState.currency}, but player balance is ${player.balance}${gameState.currency}.`);
+				return;
+			}
+			player.properties[cityId].hasHotel = true;
+			executeAutoTransferToBank(playerId, cost, `Built hotel on ${city.name}`);
+			player.properties[cityId].houses = 0; // Hotel replaces houses
+		} else {
+			player.properties[cityId].hasHotel = false;
+		}
+
+		saveStateToStorage();
+		renderPlayerPropertiesList(player);
+	}
 
         function formatCurrencyValue(val) {
             return Number(val).toLocaleString() + ' ' + gameState.currency;
