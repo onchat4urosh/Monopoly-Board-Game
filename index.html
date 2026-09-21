@@ -721,14 +721,19 @@
                 pCard.className = `p-3 rounded-lg text-center shadow-md select-none cursor-pointer flex flex-col justify-between h-44 transition transform relative active:scale-95 ${backgroundStyle}`;
                 if(!p.isBankrupt) pCard.style.backgroundColor = p.color;
 
-                const ownedCount = Object.keys(p.properties || {}).filter(k => p.properties[k].owned).length;
+                const ownedProps = Object.keys(p.properties || {}).filter(k => p.properties[k].owned).map(k => gameState.cities.find(c => c.id === k)?.name).filter(Boolean);
 
-                pCard.innerHTML = `
-                    <div class="font-bold tracking-wide text-sm truncate uppercase px-1 flex items-center justify-between">
-                        <span class="truncate">${p.name}</span>
-                        ${ownedCount > 0 ? `<span class="text-[10px] bg-black/20 px-1.5 py-0.5 rounded-full"><i class="fas fa-city text-[9px]"></i> ${ownedCount}</span>` : ''}
-                    </div>
-                    <div class="text-3xl my-auto font-black truncate">${p.isBankrupt ? 'BANKRUPT' : formatCurrencyValue(p.balance)}</div>
+				const ownedCount = ownedProps.length;
+				const ownedNamesText = ownedProps.length > 0 ? ownedProps.join(', ') : '';
+
+			pCard.innerHTML = `
+				<div class="font-bold tracking-wide text-sm truncate uppercase px-1 flex items-center justify-between">
+					<div class="flex flex-col min-w-0 text-left leading-tight">
+						<span class="truncate">${p.name}</span>${ownedNamesText ? `<span class="text-[10px] opacity-80 normal-case font-normal truncate max-w-[120px]">${ownedNamesText}</span>` : ''}
+					</div>
+					${ownedCount > 0 ? `<span class="text-[10px] bg-black/20 px-1.5 py-0.5 rounded-full shrink-0"><i class="fas fa-city text-[9px]"></i> ${ownedCount}</span>` : ''}
+				</div>
+				<div class="text-3xl my-auto font-black truncate">${p.isBankrupt ? 'BANKRUPT' : formatCurrencyValue(p.balance)}</div>
                     <div class="flex flex-col gap-1">
                         <div class="flex gap-1 justify-center items-center">
                             <button onclick="event.stopPropagation(); executeGoSalaryBonus('${p.id}');" ${p.isBankrupt ? 'disabled' : ''} class="text-[10px] uppercase font-bold border border-white/40 bg-white/10 hover:bg-white/25 px-2 py-0.5 rounded transition flex-1">GO (+${gameState.goSalary})</button>
